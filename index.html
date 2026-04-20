@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 통합 자산 관리 마스터 리포트</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --risk-base: #fff5f5;
+            --risk-accent: #e03131;
+            --sol-base: #f8fafc;
+            --sol-accent: #334155;
+            --ins-base: #ecfdf5;
+            --ins-accent: #059669;
+            --text-main: #1e293b;
+        }
+        body { 
+            font-family: 'Pretendard', sans-serif; 
+            background-color: #f1f5f9;
+            letter-spacing: -0.03em;
+            color: var(--text-main);
+        }
+        .report-canvas {
+            width: 1123px; height: 794px;
+            margin: 0 auto; background: white;
+            display: none; position: relative;
+            box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.15);
+        }
+        .report-canvas.active { display: flex; flex-direction: column; }
+        
+        .title-main { font-weight: 800; font-size: 3rem; line-height: 1.2; letter-spacing: -0.04em; }
+        .title-sub { font-weight: 700; font-size: 1.5rem; line-height: 1.4; color: #334155; }
+        
+        .card {
+            padding: 2.5rem;
+            border-radius: 32px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            min-height: 400px;
+            transition: all 0.3s ease;
+        }
+        .risk-box { background-color: var(--risk-base); border: 1.5px solid #fee2e2; }
+        .sol-box { background-color: var(--sol-base); border: 1.5px solid #e2e8f0; }
+        .ins-box { background-color: var(--ins-base); border: 1.5px solid #d1fae5; }
+        
+        .badge {
+            display: inline-flex; align-items: center;
+            padding: 8px 16px; border-radius: 12px;
+            font-size: 0.85rem; font-weight: 800;
+            margin-bottom: 1.5rem; width: fit-content;
+        }
+        .badge-risk { background: #fee2e2; color: #b91c1c; }
+        .badge-sol { background: #e2e8f0; color: #475569; }
+        .badge-ins { background: #d1fae5; color: #065f46; }
+
+        .content-text {
+            font-size: 1.15rem;
+            line-height: 1.8;
+            font-weight: 500;
+            word-break: keep-all;
+        }
+        
+        .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            display: inline-block; margin-right: 10px;
+            vertical-align: middle;
+        }
+        .risk-dot { background: var(--risk-accent); }
+        .sol-dot { background: var(--sol-accent); }
+        .ins-dot { background: var(--ins-accent); }
+
+        nav button.active {
+            background-color: #0f172a; color: white;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+        .strategy-tag {
+            font-size: 0.8rem; font-weight: 700;
+            padding: 4px 10px; border-radius: 6px; margin-top: auto;
+            display: inline-block;
+        }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body class="py-12">
+
+    <nav class="max-w-[1123px] mx-auto mb-12 flex justify-between items-center no-print px-8">
+        <div class="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200">
+            <button onclick="switchTab('med')" class="nav-btn active px-6 py-3 rounded-xl text-sm font-bold transition-all">병의원/의사</button>
+            <button onclick="switchTab('ceo')" class="nav-btn px-6 py-3 rounded-xl text-sm font-bold transition-all">법인 CEO</button>
+            <button onclick="switchTab('shop')" class="nav-btn px-6 py-3 rounded-xl text-sm font-bold transition-all">소상공인</button>
+            <button onclick="switchTab('academic')" class="nav-btn px-6 py-3 rounded-xl text-sm font-bold transition-all">교수/연구원</button>
+            <button onclick="switchTab('edu')" class="nav-btn px-6 py-3 rounded-xl text-sm font-bold transition-all">교직원/교사</button>
+        </div>
+        <button onclick="savePDF()" class="bg-slate-900 hover:bg-slate-800 text-white px-10 py-4 rounded-2xl font-bold text-sm shadow-xl transition-all">
+            리포트 PDF 저장
+        </button>
+    </nav>
+
+    <div id="report-container">
+        
+        <!-- [1] 병의원/원장 -->
+        <div id="med" class="report-canvas active">
+            <div class="p-20 flex flex-col h-full">
+                <div class="mb-12">
+                    <h1 class="title-main text-slate-900">의료 전문가 전용<br>자산 승계 마스터 리포트</h1>
+                </div>
+                <div class="grid grid-cols-3 gap-6 flex-1">
+                    <div class="card risk-box">
+                        <div class="badge badge-risk">핵심 리스크</div>
+                        <h3 class="title-sub mb-6">병원 영업권 및 상속세 부담</h3>
+                        <p class="content-text text-slate-700">
+                            <span class="dot risk-dot"></span>의료 면허와 별개로 평가되는 막대한 영업권 가치가 상속 재산에 합산되어 유족에게 감당하기 어려운 세금 부담을 유발합니다.
+                        </p>
+                    </div>
+                    <div class="card sol-box">
+                        <div class="badge badge-sol">법률·세무 솔루션</div>
+                        <h3 class="title-sub mb-6">MSO 설립 및 이익 분산</h3>
+                        <p class="content-text text-slate-700">
+                            <span class="dot sol-dot"></span>가족 법인(MSO)을 설립하여 병원 운영 수익 일부를 합법적으로 자녀 세대에 이전함으로써 미래 상속세 재원을 사전에 마련하십시오.
+                        </p>
+                        <div class="strategy-tag bg-slate-200 text-slate-700">경영지원회사 구조화</div>
+                    </div>
+                    <div class="card ins-box">
+                        <div class="badge badge-ins">보험 솔루션</div>
+                        <h3 class="title-sub mb-6">상속세 재원 전용 보험</h3>
+                        <p class="content-text text-slate-700">
+                            <span class="dot ins-dot"></span>사후 즉시 현금화가 가능한 종신보험을 통해 병원 자산의 급매나 가계 자산 손실 없이 세금을 완납할 수 있는 시스템을 구축하십시오.
+                        </p>
+                        <div class="strategy-tag bg-emerald-100 text-emerald-800">유동성 확보형 종신보험</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- [2] CEO/법인 -->
+        <div id="ceo" class="report-canvas">
+            <div class="p-20 flex flex-col h-full">
+                <div class="mb-12">
+                    <h1 class="title-main text-slate-900">법인 경영자용<br>가업 승계 및 법인 자산 전략</h1>
+                </div>
+                <div class="grid grid-cols-3 gap-6 flex-1">
+                    <div class="card risk-box">
+                        <div class="badge badge-risk">핵심 리스크</div>
+                        <h3 class="title-sub mb-6">이익잉여금 및 주식 가치</h3>
+                        <p class="content-text text-slate-700">
+                            <span class="dot risk-dot"></span>누적된 이익잉여금은 비상장 주식 가치를 왜곡시켜 승계 시 과도한 세금을 발생시키며 자금 인출 시 소득세 부담이 매우 높습니다.
+                        </p>
+                    </div>
+                    <div class="card sol-box">
+                        <div class="badge badge-sol">재무·상법 솔루션</div>
+                        <h3 class="title-sub mb-6">자사주 이익 소각 및 과세특례</h3>
+                        <p class="content-text text-slate-700">
+                            <span class="dot sol-dot"></span>이익 소각을 통해 배당소득세 부담을 최소화하며 잉여금을 정리하고, 가업승계 주식 증여세 과세특례를 활용해 경영권을 이전하십시오.
+                        </p>
+                        <div class="strategy-tag bg-slate-200 text-slate-700">자본거래 전략 및 특례 활용</div>
+                    </div>
+                    <div class="card ins-box">
+                        <div class="badge badge-ins">보험 솔루션</div>
+                        <h3 class="title-sub mb-6">CEO 플랜 및 기업 연속성</h3>
+                        <p class="content-text text-slate-700">
+                            <span class="dot ins-dot"></span>법인 정기보험을 통해 경영자 유고 시 기업의 긴급 경영 자금을 확보하고, 퇴직금 재원을 효율적으로 적립하여 은퇴 자산을 보호하십시오.
+                        </p>
+                        <div class="strategy-tag bg-emerald-100 text-emerald-800">경영자 정기보험</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- [3] 소상공인 -->
+        <div id="shop" class="report-canvas">
+            <div class="p-20 flex flex-col h-full">
+                <div class="mb-12">
+                    <h1 class="title-main text-slate-900">소상공인 맞춤형<br>사업 연속성 및 자산 보호 리포트</h1>
+                </div>
+                <div class="grid grid-cols-3 gap-6 flex-1">
+                    <div class="card risk-box">
+                        <div class="badge badge-risk">핵심 리스크</div>
+                        <h3 class="title-sub mb-6">사업 부채의 가계 전이</h3>
+                        <p class="content-text text-slate-700">
+                            <span class="dot risk-dot"></span>개인 사업자의 특성상 사업상의 법적 리스크나 부채가 개인 자산으로 직접 연결되어 가족의 경제적 기반을 위태롭게 할 수 있습니다.
+                        </p>
+                    </div>
+                    <div class="card sol-box">
+                        <div class="badge badge-sol">운용·제도 솔루션</div>
+                        <h3 class="title-sub mb-6">노란우산공제 및 신탁 구조</h3>
+                        <p class="content-text text-slate-700">
+                            <span class="dot sol-dot"></span>압류 방지 기능이 있는 공제 제도로 기초 자산을 사수하고, 가족 거주 주택을 신탁하여 사업 리스크로부터 주거 안전망을 분리하십시오.
+                        </p>
+                        <div class="strategy-tag bg-slate-200 text-slate-700">압류 방지 및 자산 격리</div>
+                    </div>
+                    <div class="card ins-box">
+                        <div class="badge badge-ins">보험 솔루션</div>
+                        <h3 class="title-sub mb-6">영업배상 및 화재 리스크 전가</h3>
+                        <p class="content-text text-slate-700">
+                            <span class="dot ins-dot"></span>시설 사고나 화재 등 사업장을 위협하는 대형 사고 리스크를 보험사로 전가하여, 어떤 상황에서도 사업 재건을 위한 현금을 확보하십시오.
+                        </p>
+                        <div class="strategy-tag bg-emerald-100 text-emerald-800">사업장 종합 보장 보험</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- [4] 교수/연구원 -->
+        <div id="academic" class="report-canvas">
+            <div class="p-20 flex flex-col h-full">
+                <div class="mb-12">
+                    <h1 class="title-main text-slate-900">전문 연구직용<br>지식 자산화 및 소득 절세 리포트</h1>
+                </div>
+                <div class="grid grid-cols-3 gap-6 flex-1">
+                    <div class="card risk-box">
+                        <div class="badge badge-risk">핵심 리스크</div>
+                        <h3 class="title-sub mb-6">단일 근로소득의 높은 세율</h3>
+                        <p class="content-text text-slate-700">
+                            <span class="dot risk-dot"></span>높은 근로소득세로 인해 실질 자산 증식이 어렵고, 은퇴 후 공적 연금에만 의존하게 되는 구조적인 소득 결핍 위험이 존재합니다.
+                        </p>
+                    </div>
+                    <div class="card sol-box">
+                        <div class="badge badge-sol">IP·세무 솔루션</div>
+                        <h3 class="title-sub mb-6">특허권 양도 및 기타소득 전략</h3>
+                        <p class="content-text text-slate-700">
+                            <span class="dot sol-dot"></span>보유 지식재산권(IP)을 법인에 양도하고 비과세 혹은 분리과세 혜택이 큰 기타소득으로 수령하여 세부담을 낮추고 자산을 증식하십시오.
+                        </p>
+                        <div class="strategy-tag bg-slate-200 text-slate-700">지식재산권 수익화</div>
+                    </div>
+                    <div class="card ins-box">
+                        <div class="badge badge-ins">보험 솔루션</div>
+                        <h3 class="title-sub mb-6">비과세 저축 및 연금 포트폴리오</h3>
+                        <p class="content-text text-slate-700">
+                            <span class="dot ins-dot"></span>금융소득종합과세에서 자유로운 비과세 보험 상품을 활용하여 장기 자산을 운용하고, 은퇴 후 평생 마르지 않는 현금 흐름을 준비하십시오.
+                        </p>
+                        <div class="strategy-tag bg-emerald-100 text-emerald-800">확정 금리형 연금 및 비과세</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- [5] 교직원/교사 -->
+        <div id="edu" class="report-canvas">
+            <div class="p-20 flex flex-col h-full">
+                <div class="mb-12">
+                    <h1 class="title-main text-slate-900">교육 전문가용<br>안정적 노후 및 연금 브릿지 리포트</h1>
+                </div>
+                <div class="grid grid-cols-3 gap-6 flex-1">
+                    <div class="card risk-box">
+                        <div class="badge badge-risk">핵심 리스크</div>
+                        <h3 class="title-sub mb-6">연금 수령 공백기(은퇴 절벽)</h3>
+                        <p class="content-text text-slate-700">
+                            <span class="dot risk-dot"></span>사학연금 등 공적 연금 수령 개시 연령 상향으로 인해, 명예퇴직 후 연금 개시 전까지 소득이 단절되는 위험 구간이 발생합니다.
+                        </p>
+                    </div>
+                    <div class="card sol-box">
+                        <div class="badge badge-sol">투자·세무 솔루션</div>
+                        <h3 class="title-sub mb-6">IRP 및 배당 자산 최적화</h3>
+                        <p class="content-text text-slate-700">
+                            <span class="dot sol-dot"></span>개인형 퇴직연금(IRP)의 세액공제 혜택을 극대화하고, 내부에서 리츠나 인컴형 ETF를 운용하여 매월 정기적인 분배금을 창출하십시오.
+                        </p>
+                        <div class="strategy-tag bg-slate-200 text-slate-700">퇴직연금 효율화 전략</div>
+                    </div>
+                    <div class="card ins-box">
+                        <div class="badge badge-ins">보험 솔루션</div>
+                        <h3 class="title-sub mb-6">브릿지 연금 및 케어 보험</h3>
+                        <p class="content-text text-slate-700">
+                            <span class="dot ins-dot"></span>연금 수령 공백기를 메우는 가교 연금을 설정하고, 노후 의료비와 간병비 부담을 완벽히 해결할 수 있는 보장성 자산을 선제적으로 배치하십시오.
+                        </p>
+                        <div class="strategy-tag bg-emerald-100 text-emerald-800">공백기 전용 연금 및 간병</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 탭 전환 로직
+        function switchTab(id) {
+            document.querySelectorAll('.report-canvas').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        // PDF 저장 로직
+        async function savePDF() {
+            const btn = event.currentTarget;
+            const originalText = btn.innerText;
+            btn.innerText = "PDF 생성 중...";
+            const activePage = document.querySelector('.report-canvas.active');
+            try {
+                const canvas = await html2canvas(activePage, { 
+                    scale: 2,
+                    useCORS: true,
+                    logging: false
+                });
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('l', 'mm', 'a4');
+                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 297, 210);
+                pdf.save(`자산_관리_전략_리포트_${activePage.id}.pdf`);
+            } catch (err) {
+                console.error(err);
+                alert("PDF 생성 중 오류가 발생했습니다.");
+            } finally {
+                btn.innerText = originalText;
+            }
+        }
+    </script>
+</body>
+</html>
